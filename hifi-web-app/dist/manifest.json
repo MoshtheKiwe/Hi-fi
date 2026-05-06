@@ -1,0 +1,19 @@
+{
+  "id": "/hifi-player-app",
+  "name": "Vintage Hi-Fi Player",
+  "short_name": "Hi-Fi",
+  "description": "High-performance offline audio player with OPFS storage",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#080808",
+  "theme_color": "#1a1a1c",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
