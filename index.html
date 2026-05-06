@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Vintage Hi-Fi Player</title>
+  <link rel="manifest" href="manifest.json" />
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch(console.error);
+      });
+    }
+  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="min-h-screen flex items-center justify-center p-4" style="background: #080808;">
+  <div id="opfs-error" class="hidden min-h-screen items-center justify-center p-8 text-center">
+    <p class="font-mono text-sm" style="color: #888;">
+      Origin Private File System not supported.<br />Use a modern browser (Chrome 86+, Safari 15.2+).
+    </p>
+  </div>
+
+  <div id="app-root" class="hifi-device rounded-2xl overflow-hidden w-full relative" style="max-width: 440px;">
+    <!-- Wood top trim -->
+    <div class="wood-trim h-3"></div>
+
+    <!-- Device header -->
+    <div class="flex items-center justify-between px-5 py-2" style="background: rgba(0,0,0,0.3);">
+      <div class="flex items-center gap-2">
+        <div class="hifi-led-dot on"></div>
+        <span style="font-family: 'Source Code Pro', monospace; font-size: 9px; letter-spacing: 0.25em; color: #555;">VINTAGE · HI-FI</span>
+      </div>
+      <span style="font-family: 'Source Code Pro', monospace; font-size: 9px; letter-spacing: 0.2em; color: #333;">MODEL VS-1</span>
+    </div>
+
+    <!-- VFD Display -->
+    <div class="px-4 py-2">
+      <div class="hifi-display-screen p-3 rounded-md flex flex-col justify-between" style="height: 60px; position: relative;">
+        <!-- Top row: Status & Format -->
+        <div class="flex justify-between items-center w-full" style="font-size: 9px; letter-spacing: 0.15em; line-height: 1;">
+          <div class="flex items-center gap-2">
+            <span id="vfd-state" class="hifi-display-phosphor transition-opacity duration-300 opacity-50">STOP</span>
+            <div id="vfd-status-led" class="hifi-led-dot green"></div>
+          </div>
+          <span id="vfd-format" class="hifi-display-amber" style="opacity: 0.1;">MPEG</span>
+        </div>
+        
+        <!-- Middle row: Scrolling Track Name -->
+        <div style="position: absolute; top: 50%; left: 12px; right: 12px; transform: translateY(-50%); overflow: hidden; height: 16px;">
+          <div id="vfd-track-name" class="hifi-display-phosphor whitespace-nowrap" style="font-size: 13px; letter-spacing: 0.1em; display: inline-block;">
+            NO TRACK LOADED
+          </div>
+        </div>
+
+        <!-- Bottom row: Time -->
+        <div class="flex justify-between items-center w-full mt-auto" style="font-size: 10px; letter-spacing: 0.05em; font-variant-numeric: tabular-nums;">
+          <span id="vfd-time-current" class="hifi-display-phosphor" style="opacity: 0.3;">00:00</span>
+          <span id="vfd-time-duration" class="hifi-display-amber" style="opacity: 0.3;">00:00</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Station preset buttons -->
+    <div class="px-4 mb-1">
+      <div id="station-presets" class="flex flex-wrap gap-1.5 items-center">
+        <!-- Rendered via JS -->
+      </div>
+    </div>
+
+    <!-- Tuning band & Dial -->
+    <div class="flex items-center justify-center gap-3 px-4 py-1">
+      <!-- Tuning Slider -->
+      <div class="flex-1 relative h-6 rounded-md overflow-hidden" style="background: #111; box-shadow: inset 0 2px 4px rgba(0,0,0,0.8); border: 1px solid rgba(255,255,255,0.03);">
+        <div class="absolute inset-0 pointer-events-none" style="background: repeating-linear-gradient(90deg, transparent, transparent 18px, rgba(255,255,255,0.03) 18px, rgba(255,255,255,0.03) 20px);"></div>
+        <div id="tuning-needle" class="absolute top-0 bottom-0 w-0.5 bg-red-600 shadow-[0_0_8px_rgba(220,38,38,0.8)] z-10 transition-all duration-300" style="left: 0%;"></div>
+      </div>
+      <!-- Dial -->
+      <div class="relative w-12 h-12 flex-shrink-0 flex items-center justify-center">
+        <div id="station-dial" class="w-10 h-10 rounded-full cursor-pointer" style="background: linear-gradient(135deg, #444 0%, #222 100%); box-shadow: 0 4px 10px rgba(0,0,0,0.8), inset 0 1px 1px rgba(255,255,255,0.2), inset 0 -1px 1px rgba(0,0,0,0.8); border: 1px solid #111; transition: transform 0.3s ease-out;">
+          <div class="w-1.5 h-1.5 rounded-full bg-red-500 absolute top-1.5 left-1/2 -translate-x-1/2 shadow-[0_0_4px_rgba(239,68,68,0.8)]"></div>
+          <div class="absolute inset-1 rounded-full border border-white/5 pointer-events-none"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Track list view -->
+    <div class="mx-4 mb-3">
+      <div class="hifi-brushed-panel flex items-center justify-between px-3 py-1.5 rounded-t-md">
+        <span id="track-list-title" style="font-family: 'Source Code Pro', monospace; font-size: 9px; letter-spacing: 0.2em; color: #3a3a3a;">TRACK LIST</span>
+        <div class="station-preset-btn px-2 py-0.5" style="position: relative; overflow: hidden; cursor: pointer; font-size: 9px; letter-spacing: 0.15em; font-family: 'Source Code Pro', monospace; color: #aaa; user-select: none;">
+          ⊕ LOAD FILES
+          <input id="load-files-input" type="file" multiple style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; font-size: 16px;" />
+        </div>
+      </div>
+      <div id="track-list-container" style="background: #0b0b0d; border: 1px solid rgba(0,0,0,0.6); border-top: none; border-radius: 0 0 6px 6px; max-height: 168px; overflow-y: auto; -webkit-overflow-scrolling: touch;">
+        <p id="track-list-empty" style="text-align: center; padding: 20px 0; font-size: 10px; letter-spacing: 0.2em; color: #333; font-family: 'Source Code Pro', monospace;">SELECT A STATION</p>
+        <div id="track-list-items"></div>
+      </div>
+    </div>
+
+    <!-- Transport Controls -->
+    <div class="hifi-brushed-panel flex items-center justify-center gap-4 px-6 py-4">
+      <button id="btn-shuffle" class="mechanical-btn w-12 h-8 rounded relative flex items-center justify-center text-xs" style="color: #e5e5e5;">
+        <div class="btn-face"></div>
+        <span style="font-size: 10px; z-index: 1;">⇄</span>
+      </button>
+      <button id="btn-prev" class="mechanical-btn w-12 h-8 rounded relative flex items-center justify-center" style="color: #e5e5e5;">
+        <div class="btn-face"></div>
+        <svg width="12" height="10" viewBox="0 0 16 13" fill="currentColor" style="z-index: 1;"><rect x="0" y="0" width="2.5" height="13" rx="1.2"></rect><polygon points="15,0 15,13 5.5,6.5"></polygon></svg>
+      </button>
+      <button id="btn-playpause" class="mechanical-btn w-16 h-10 rounded relative flex items-center justify-center" style="color: #e5e5e5;">
+        <div class="btn-face"></div>
+        <div id="icon-playpause" style="z-index: 1;">
+          <svg width="13" height="16" viewBox="0 0 13 16" fill="currentColor"><polygon points="0,0 0,16 13,8"></polygon></svg>
+        </div>
+      </button>
+      <button id="btn-next" class="mechanical-btn w-12 h-8 rounded relative flex items-center justify-center" style="color: #e5e5e5;">
+        <div class="btn-face"></div>
+        <svg width="12" height="10" viewBox="0 0 16 13" fill="currentColor" style="z-index: 1;"><polygon points="1,0 1,13 10.5,6.5"></polygon><rect x="13.5" y="0" width="2.5" height="13" rx="1.2"></rect></svg>
+      </button>
+    </div>
+
+    <!-- Wood bottom trim -->
+    <div class="wood-trim h-3"></div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
